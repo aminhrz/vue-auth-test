@@ -99,4 +99,4 @@ The build command performs type checking and outputs static assets to `dist/`. T
 - `npm run format` – Format source files with Prettier.
 
 ## Author
-- LidoChat Team
+- Amin Heidarzadeh
