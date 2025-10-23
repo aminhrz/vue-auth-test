@@ -9,28 +9,19 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const handleLogin = async (values: LoginValues) => {
-  try {
-    await authStore.login(values.email, values.password)
+  const success = await authStore.login(values.email, values.password)
+
+  if (success) {
     toast.success('با موفقیت وارد شدید')
     router.push('/dashboard')
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      const map: Record<string, string> = {
-        'Firebase: Error (auth/invalid-credential).': 'نام کاربری یا رمز عبور اشتباه است ',
-        'Firebase: Error (auth/user-not-found).': 'کاربری با این ایمیل یافت نشد',
-        'Firebase: Error (auth/wrong-password).': 'رمز عبور نادرست است',
-        'Firebase: Error (auth/too-many-requests).': 'تعداد تلاش‌های ورود زیاد است، کمی بعد امتحان کنید',
-      }
-
-      const message = map[err.message] || 'خطایی رخ داد، لطفاً دوباره تلاش کنید'
-      toast.error(message)
-    } else {
-      toast.error('خطایی رخ داد')
-    }
+    return
   }
+
+  toast.error(authStore.error || 'خطایی رخ داد، لطفاً دوباره تلاش کنید')
+  authStore.clearError()
 }
 </script>
 
 <template>
-  <AuthForm :loading="authStore.loading" mode="login" @submit="handleLogin" />
+  <AuthForm :loading="authStore.loading" mode="login" @login="handleLogin" />
 </template>

@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import 'vue-sonner/style.css'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { BApp } from 'bootstrap-vue-next'
 import { Toaster } from 'vue-sonner'
 </script>
 

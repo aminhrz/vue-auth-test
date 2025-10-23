@@ -9,28 +9,19 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const handleRegister = async (values: RegisterValues) => {
-  try {
-    await authStore.register(values.email, values.password)
+  const success = await authStore.register(values.email, values.password)
+
+  if (success) {
     toast.success('ثبت‌نام با موفقیت انجام شد ')
     router.push('/')
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      const map: Record<string, string> = {
-        'Firebase: Error (auth/email-already-in-use).': 'این ایمیل قبلاً ثبت شده است ',
-        'Firebase: Error (auth/invalid-email).': 'فرمت ایمیل وارد شده معتبر نیست ',
-        'Firebase: Error (auth/operation-not-allowed).': 'عملیات ثبت‌نام برای این حساب غیرفعال است',
-        'Firebase: Error (auth/weak-password).': 'رمز عبور باید حداقل ۶ کاراکتر باشد',
-      }
-
-      const message = map[err.message] || 'خطایی در ثبت‌نام رخ داد، لطفاً دوباره تلاش کنید '
-      toast.error(message)
-    } else {
-      toast.error('ثبت‌نام ناموفق بود')
-    }
+    return
   }
+
+  toast.error(authStore.error || 'خطایی در ثبت‌نام رخ داد، لطفاً دوباره تلاش کنید ')
+  authStore.clearError()
 }
 </script>
 
 <template>
-  <AuthForm mode="register" :loading="authStore.loading" @submit="handleRegister as any" />
+  <AuthForm mode="register" :loading="authStore.loading" @register="handleRegister" />
 </template>

@@ -1,7 +1,7 @@
-# Authentication Frontend
+# LidoChat Authentication Frontend
 
 ## Overview
-Sampel Authentication Frontend is a Vue 3 + TypeScript single-page application that demonstrates email/password authentication backed by Firebase. complete with responsive Bootstrap styling, client-side form validation, and toast-based feedback. The project is scaffolded with Vite and organized for rapid iteration while keeping the codebase maintainable as the app grows.
+LidoChat Authentication Frontend is a Vue 3 + TypeScript single-page application that demonstrates email/password authentication backed by Firebase. It delivers a localized right-to-left experience for Persian-speaking users, complete with responsive Bootstrap styling, client-side form validation, and toast-based feedback. The project is scaffolded with Vite and organized for rapid iteration while keeping the codebase maintainable as the app grows.
 
 ## Tech Stack
 - **Framework:** Vue 3 with the Composition API and Vite
@@ -99,4 +99,4 @@ The build command performs type checking and outputs static assets to `dist/`. T
 - `npm run format` – Format source files with Prettier.
 
 ## Author
-- Amin Heidarzadeh
+- LidoChat Team

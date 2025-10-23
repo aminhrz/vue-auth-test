@@ -3,7 +3,6 @@ import LoginPage from '@/pages/login-page.vue'
 import RegisterPage from '@/pages/register-page.vue'
 import DashboardPage from '@/pages/dashboard-page.vue'
 import { useAuthStore } from '@/stores/auth'
-import Cookies from 'js-cookie'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -31,8 +30,9 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  const token = Cookies.get('token')
-  const isLoggedIn = !!(authStore.user || token)
+  await authStore.initAuth()
+
+  const isLoggedIn = authStore.isAuthenticated
 
   document.title = (to.meta.title as string) || 'لیدوچت'
 
