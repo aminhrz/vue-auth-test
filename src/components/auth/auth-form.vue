@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { loginSchema, type LoginValues } from '@/schemas/login'
@@ -11,13 +11,15 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'submit', payload: LoginValues | RegisterValues): void
+  (e: 'login', payload: LoginValues): void
+  (e: 'register', payload: RegisterValues): void
 }>()
 
 const activeSchema = computed(() => (props.mode === 'login' ? loginSchema : registerSchema))
+const validationSchema = computed(() => toTypedSchema(activeSchema.value))
 
-const { handleSubmit, errors, defineField } = useForm({
-  validationSchema: toTypedSchema(activeSchema.value),
+const { handleSubmit, errors, defineField, resetForm } = useForm<LoginValues | RegisterValues>({
+  validationSchema,
 })
 
 const [email, emailAttrs] = defineField('email')
@@ -26,13 +28,30 @@ const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
 
 const needConfirm = computed(() => props.mode === 'register')
 
+const isRegisterValues = (
+  values: LoginValues | RegisterValues
+): values is RegisterValues => 'confirmPassword' in values
+
 const onSubmit = handleSubmit((values) => {
-  if (props.mode === 'register') {
-    emit('submit', values as RegisterValues)
+  if (isRegisterValues(values)) {
+    emit('register', values)
   } else {
-    emit('submit', values as LoginValues)
+    emit('login', values)
   }
 })
+
+watch(
+  () => props.mode,
+  () => {
+    resetForm({
+      values: {
+        email: '',
+        password: '',
+        ...(props.mode === 'register' ? { confirmPassword: '' } : {}),
+      },
+    })
+  }
+)
 </script>
 
 <template>
