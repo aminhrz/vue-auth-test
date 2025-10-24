@@ -1,3 +1,4 @@
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { auth } from '@/firebase/firebase'
 import {
@@ -9,148 +10,148 @@ import {
 } from 'firebase/auth'
 import { mapFirebaseAuthError } from '@/utils/firebaseError'
 
-export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    user: null as User | null,
-    loading: false,
-    error: null as string | null,
-    initialized: false,
-    initPromise: null as Promise<void> | null,
-    logoutTimer: null as ReturnType<typeof setTimeout> | null,
-  }),
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref<User | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  const initialized = ref(false)
+  let initPromise: Promise<void> | null = null
+  let logoutTimer: ReturnType<typeof setTimeout> | null = null
 
-  getters: {
-    isAuthenticated: (state) => Boolean(state.user),
-    isReady: (state) => state.initialized,
-  },
+  const isAuthenticated = computed(() => Boolean(user.value))
+  const isReady = computed(() => initialized.value)
 
-  actions: {
-    async register(email: string, password: string) {
-      this.loading = true
-      this.error = null
-      try {
-        const { user } = await createUserWithEmailAndPassword(auth, email, password)
-        await this.handleAuthenticatedUser(user)
-        return true
-      } catch (error) {
-        this.error = mapFirebaseAuthError(error)
-        return false
-      } finally {
-        this.loading = false
-      }
-    },
+  async function register(email: string, password: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const { user: u } = await createUserWithEmailAndPassword(auth, email, password)
+      await handleAuthenticatedUser(u)
+      return true
+    } catch (err: unknown) {
+      error.value = mapFirebaseAuthError(err)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
 
-    async login(email: string, password: string) {
-      this.loading = true
-      this.error = null
-      try {
-        const { user } = await signInWithEmailAndPassword(auth, email, password)
-        await this.handleAuthenticatedUser(user)
-        return true
-      } catch (error) {
-        this.error = mapFirebaseAuthError(error)
-        return false
-      } finally {
-        this.loading = false
-      }
-    },
+  async function login(email: string, password: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const { user: u } = await signInWithEmailAndPassword(auth, email, password)
+      await handleAuthenticatedUser(u)
+      return true
+    } catch (err: unknown) {
+      error.value = mapFirebaseAuthError(err)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
 
-    async logout() {
-      this.clearLogoutTimer()
-      try {
-        await signOut(auth)
-      } catch (error) {
-        this.error = mapFirebaseAuthError(error)
-      } finally {
-        this.clearSession()
-      }
-    },
+  async function logout() {
+    clearLogoutTimer()
+    try {
+      await signOut(auth)
+    } catch (err: unknown) {
+      error.value = mapFirebaseAuthError(err)
+    } finally {
+      clearSession()
+    }
+  }
 
-    initAuth() {
-      if (this.initPromise) {
-        return this.initPromise
-      }
+  function initAuth() {
+    if (initPromise) return initPromise
 
-      this.initPromise = new Promise<void>((resolve) => {
-        let resolved = false
-
-        const finishInitialization = () => {
-          if (!resolved) {
-            resolved = true
-            this.initialized = true
-            resolve()
-          }
+    initPromise = new Promise<void>((resolve) => {
+      let resolved = false
+      const finishInitialization = () => {
+        if (!resolved) {
+          resolved = true
+          initialized.value = true
+          resolve()
         }
+      }
 
-        onAuthStateChanged(
-          auth,
-          async (user) => {
-            try {
-              if (user) {
-                await this.handleAuthenticatedUser(user)
-              } else {
-                this.clearSession()
-              }
-            } catch (error) {
-              this.error = mapFirebaseAuthError(error)
-              this.clearSession()
-            } finally {
-              finishInitialization()
-            }
-          },
-          (error) => {
-            this.error = mapFirebaseAuthError(error)
-            this.clearSession()
+      onAuthStateChanged(
+        auth,
+        async (u) => {
+          try {
+            if (u) await handleAuthenticatedUser(u)
+            else clearSession()
+          } catch (err: unknown) {
+            error.value = mapFirebaseAuthError(err)
+            clearSession()
+          } finally {
             finishInitialization()
           }
-        )
-      })
+        },
+        (err) => {
+          error.value = mapFirebaseAuthError(err)
+          clearSession()
+          finishInitialization()
+        }
+      )
+    })
 
-      return this.initPromise
-    },
+    return initPromise
+  }
 
-    clearError() {
-      this.error = null
-    },
+  function clearError() {
+    error.value = null
+  }
 
-    clearSession() {
-      this.user = null
-      this.clearLogoutTimer()
-    },
+  function clearSession() {
+    user.value = null
+    clearLogoutTimer()
+  }
 
-    clearLogoutTimer() {
-      if (this.logoutTimer) {
-        clearTimeout(this.logoutTimer)
-        this.logoutTimer = null
-      }
-    },
+  function clearLogoutTimer() {
+    if (logoutTimer) {
+      clearTimeout(logoutTimer)
+      logoutTimer = null
+    }
+  }
 
-    async handleAuthenticatedUser(user: User) {
-      this.user = user
-      this.error = null
-      await this.scheduleTokenRefresh(user)
-    },
+  async function handleAuthenticatedUser(u: User) {
+    user.value = u
+    error.value = null
+    await scheduleTokenRefresh(u)
+  }
 
-    async scheduleTokenRefresh(user: User) {
-      this.clearLogoutTimer()
+  async function scheduleTokenRefresh(u: User) {
+    clearLogoutTimer()
+    try {
+      const tokenResult = await u.getIdTokenResult()
+      const expirationTimestamp = new Date(tokenResult.expirationTime).getTime()
+      const refreshDelay = Math.max(expirationTimestamp - Date.now() - 60 * 1000, 0)
 
-      try {
-        const tokenResult = await user.getIdTokenResult()
-        const expirationTimestamp = new Date(tokenResult.expirationTime).getTime()
-        const refreshDelay = Math.max(expirationTimestamp - Date.now() - 60 * 1000, 0)
-
-        this.logoutTimer = setTimeout(async () => {
-          try {
-            await user.getIdToken(true)
-            await this.scheduleTokenRefresh(user)
-          } catch (error) {
-            this.error = mapFirebaseAuthError(error)
-            await this.logout()
-          }
-        }, refreshDelay)
-      } catch (error) {
-        this.error = mapFirebaseAuthError(error)
-      }
-    },
-  },
+      logoutTimer = setTimeout(async () => {
+        try {
+          await u.getIdToken(true)
+          await scheduleTokenRefresh(u)
+        } catch (err: unknown) {
+          error.value = mapFirebaseAuthError(err)
+          await logout()
+        }
+      }, refreshDelay)
+    } catch (err: unknown) {
+      error.value = mapFirebaseAuthError(err)
+    }
+  }
+  return {
+    user,
+    loading,
+    error,
+    initialized,
+    isAuthenticated,
+    isReady,
+    register,
+    login,
+    logout,
+    initAuth,
+    clearError,
+  }
 })
